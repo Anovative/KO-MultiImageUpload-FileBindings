@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>KO File Bindings</title>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="ko-file-bindings.scss">
+    <script type='text/javascript' src='jquery-2.2.0.min.js'></script>
+    <script type='text/javascript' src='knockout-3.4.0.js'></script>
+    <script type='text/javascript' src='knockout-file-bindings.js'></script>
+</head>
+<body>
+    <div class="container">
+        <header class="text-center" style="display: inline-block; padding: 1em; margin: 1em 0; width: 100%;">
+            <h1 class="col-md-11">Multi Img Upload Test</h1>
+            <button class="btn btn-default col-md-1" style="" data-bind="click: debug">Debug</button>
+        </header>
+
+        <div class="well" data-bind="fileDrag: fileData">
+            <div class="form-group row">
+
+                <!--  The section that contains the Image that has been uploaded & the Drag n' Drop area / File Upload button for Win File Explorer uploads  -->
+                <div class="col-md-7">
+                    <img style="height: 125px;" class="img-rounded  thumb" data-bind="attr: { src: fileData().dataURL }, visible: fileData().dataURL">
+
+                    <div data-bind="ifnot: fileData().dataURL">
+                        <label class="drag-label">Drag file here</label>
+                    </div>
+
+                </div>
+
+                <!--  ? ? ? ? ?  -->
+                <div class="col-md-5">
+                    <input type="file" accept="image/*" name="files[]" multiple 
+                                 data-bind="fileInput: fileData, customFileInput: { buttonClass: 'btn btn-success', fileNameClass: 'disabled form-control', onClear: onClear }">
+                </div>
+
+            </div><!-- END => .form-group .row -->
+        </div><!-- END => #well -->
+    </div><!-- END => #container -->
+</body>
+</html>

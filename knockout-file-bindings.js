@@ -1,28 +1,24 @@
-/*
- * knockout-file-bindings
- * Copyright 2014 Muhammad Safraz Razik
- * All Rights Reserved.
- * Use, reproduction, distribution, and modification of this code is subject to the terms and
- * conditions of the MIT license, available at http://www.opensource.org/licenses/mit-license.php
- *
- * Author: Muhammad Safraz Razik
- * Project: https://github.com/adrotec/knockout-file-bindings
- */
 (function (factory) {
     // Module systems magic dance.
 
-    if (typeof require === "function" && typeof exports === "object" && typeof module === "object") {
+    if (typeof require === "function" && typeof exports === "object" && typeof module === "object") 
+    {
         // CommonJS or Node: hard-coded dependency on "knockout"
         factory(require("knockout"), require("jquery"));
-    } else if (typeof define === "function" && define["amd"]) {
+    } 
+    else if (typeof define === "function" && define["amd"]) 
+    {
         // AMD anonymous module with hard-coded dependency on "knockout"
         define(["knockout", "jquery"], factory);
-    } else {
+    } 
+    else 
+    {
         // <script> tag: use the global `ko` object, attaching a `mapping` property
         factory(ko, jQuery);
     }
-}(function (ko, $) {
+}
 
+(function (ko, $) {
     var fileBindings = {
         customFileInputSystemOptions: {
             wrapperClass: 'custom-file-input-wrapper',
