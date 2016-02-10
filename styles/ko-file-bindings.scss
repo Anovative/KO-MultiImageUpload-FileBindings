@@ -46,3 +46,16 @@
         opacity: 0;
     }
 }
+
+label {
+    &#lbl-images {
+        width: 100%;
+        text-align: center;
+    }
+}
+
+ul {
+    &#image-list {
+        list-style-type: none;
+    }
+}

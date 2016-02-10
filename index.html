@@ -5,11 +5,12 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" type="text/css" href="bootstrap.min.css">
-    <link rel="stylesheet" type="text/css" href="ko-file-bindings.scss">
-    <script type='text/javascript' src='jquery-2.2.0.min.js'></script>
-    <script type='text/javascript' src='knockout-3.4.0.js'></script>
-    <script type='text/javascript' src='knockout-file-bindings.js'></script>
+    <link rel="stylesheet" type="text/css" href="libs/bootstrap-3.3.6.css">
+    <link rel="stylesheet" type="text/css" href="styles/ko-file-bindings.css">
+    <script type='text/javascript' src='libs/jquery-2.2.0.js'></script>
+    <script type='text/javascript' src='libs/knockout-3.4.0.js'></script>
+    <script type='text/javascript' src='js/knockout-file-bindings.js'></script>
+    <script type="text/javascript" src="js/ViewModels/ImageUploader.vm.js"></script>
 </head>
 <body>
     <div class="container">
@@ -24,11 +25,9 @@
                 <!--  The section that contains the Image that has been uploaded & the Drag n' Drop area / File Upload button for Win File Explorer uploads  -->
                 <div class="col-md-7">
                     <img style="height: 125px;" class="img-rounded  thumb" data-bind="attr: { src: fileData().dataURL }, visible: fileData().dataURL">
-
                     <div data-bind="ifnot: fileData().dataURL">
                         <label class="drag-label">Drag file here</label>
                     </div>
-
                 </div>
 
                 <!--  ? ? ? ? ?  -->
@@ -39,6 +38,15 @@
 
             </div><!-- END => .form-group .row -->
         </div><!-- END => #well -->
+
+        <div id="image-list-container" class="col-md-12">
+            <label id="lbl-images">Images</label>
+            <ul id="image-list">
+                <li>
+                    <img style="height: 125px;" class="img-rounded  thumb" data-bind="attr: { src: fileData().dataURL }, visible: fileData().dataURL">
+                </li>
+            </ul>
+        </div>
     </div><!-- END => #container -->
 </body>
 </html>

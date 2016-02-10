@@ -1,0 +1,580 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+			[
+				"inl",
+				"inline-block"
+			],
+			[
+				"align",
+				"align-self"
+			],
+			[
+				"mar",
+				"margin"
+			],
+			[
+				"text",
+				"text-align"
+			],
+			[
+				"margin-",
+				"margin-right"
+			],
+			[
+				"inline-b",
+				"inline-block"
+			],
+			[
+				"inli",
+				"inline"
+			]
+		]
+	},
+	"buffers":
+	[
+		{
+			"contents": "(function (factory) {\n    // Module systems magic dance.\n\n    if (typeof require === \"function\" && typeof exports === \"object\" && typeof module === \"object\") \n    {\n        // CommonJS or Node: hard-coded dependency on \"knockout\"\n        factory(require(\"knockout\"), require(\"jquery\"));\n    } \n    else if (typeof define === \"function\" && define[\"amd\"]) \n    {\n        // AMD anonymous module with hard-coded dependency on \"knockout\"\n        define([\"knockout\", \"jquery\"], factory);\n    } \n    else \n    {\n        // <script> tag: use the global `ko` object, attaching a `mapping` property\n        factory(ko, jQuery);\n    }\n}\n\n(function (ko, $) {\n    var fileBindings = {\n        customFileInputSystemOptions: {\n            wrapperClass: 'custom-file-input-wrapper',\n            fileNameClass: 'custom-file-input-file-name',\n            buttonGroupClass: 'custom-file-input-button-group',\n            buttonClass: 'custom-file-input-button',\n            clearButtonClass: 'custom-file-input-clear-button',\n            buttonTextClass: 'custom-file-input-button-text',\n        },\n        defaultOptions: {\n            wrapperClass: 'input-group',\n            fileNameClass: 'disabled form-control',\n            noFileText: 'No file chosen',\n            buttonGroupClass: 'input-group-btn',\n            buttonClass: 'btn btn-primary',\n            clearButtonClass: 'btn btn-default',\n            buttonText: 'Choose File',\n            changeButtonText: 'Change',\n            clearButtonText: 'Clear',\n            fileName: true,\n            clearButton: true,\n            onClear: function(fileData, options) {\n                if (typeof fileData.clear === 'function') {\n                    fileData.clear();\n                }\n            }\n        },\n    }\n\n    var windowURL = window.URL || window.webkitURL;\n\n    ko.bindingHandlers.fileInput = {\n        init: function(element, valueAccessor) {\n            element.onchange = function() {\n                var fileData = ko.utils.unwrapObservable(valueAccessor()) || {};\n                if (fileData.dataUrl) {\n                    fileData.dataURL = fileData.dataUrl;\n                }\n                if (fileData.objectUrl) {\n                    fileData.objectURL = fileData.objectUrl;\n                }\n                fileData.file = fileData.file || ko.observable();\n\n                var file = this.files[0];\n                if (file) {\n                    fileData.file(file);\n                }\n\n                if (!fileData.clear) {\n                    fileData.clear = function() {\n                        $.each(['file', 'objectURL', 'base64String', 'binaryString', 'text', 'dataURL', 'arrayBuffer'], function(i, property) {\n                            if (fileData[property] && ko.isObservable(fileData[property])) {\n                                if (property == 'objectURL') {\n                                    windowURL.revokeObjectURL(fileData.objectURL());\n                                }\n                                fileData[property](null);\n                            }\n                        });\n                        element.value = '';\n                    }\n                }\n                if (ko.isObservable(valueAccessor())) {\n                    valueAccessor()(fileData);\n                }\n            };\n            element.onchange();\n        },\n        update: function(element, valueAccessor, allBindingsAccessor) {\n\n            var fileData = ko.utils.unwrapObservable(valueAccessor());\n\n            var file = ko.isObservable(fileData.file) && fileData.file();\n\n            if (fileData.objectURL && ko.isObservable(fileData.objectURL)) {\n                var newUrl = file && windowURL.createObjectURL(file);\n                if (newUrl) {\n                    var oldUrl = fileData.objectURL();\n                    if (oldUrl) {\n                        windowURL.revokeObjectURL(oldUrl);\n                    }\n                    fileData.objectURL(newUrl);\n                }\n            }\n\n\n            if (fileData.base64String && ko.isObservable(fileData.base64String)) {\n                if (fileData.dataURL && ko.isObservable(fileData.dataURL)) {\n                    // will be handled\n                }\n                else {\n                    fileData.dataURL = ko.observable(); // hack\n                }\n            }\n\n            // var properties = ['binaryString', 'text', 'dataURL', 'arrayBuffer'], property;\n            // for(var i = 0; i < properties.length; i++){\n            //     property = properties[i];\n            ['binaryString', 'text', 'dataURL', 'arrayBuffer'].forEach(function(property){\n                var method = 'readAs' + (property.substr(0, 1).toUpperCase() + property.substr(1));\n                if (property != 'dataURL' && !(fileData[property] && ko.isObservable(fileData[property]))) {\n                    return true;\n                }\n                if (!file) {\n                    return true;\n                }\n                var reader = new FileReader();\n                reader.onload = function(e) {\n                    if (fileData[property]) {\n                        fileData[property](e.target.result);\n                    }\n                    if (method == 'readAsDataURL' && fileData.base64String && ko.isObservable(fileData.base64String)) {\n                        var resultParts = e.target.result.split(\",\");\n                        if (resultParts.length === 2) {\n                            fileData.base64String(resultParts[1]);\n                        }\n                    }\n                };\n\n                reader[method](file);\n            });\n        }\n    };\n\n    ko.bindingHandlers.fileDrag = {\n        update: function(element, valueAccessor, allBindingsAccessor) {\n            var fileData = ko.utils.unwrapObservable(valueAccessor()) || {};\n\n            if (!$(element).data(\"fileDragInjected\")) {\n                element.classList.add('filedrag');\n                element.ondragover = element.ondragleave = element.ondrop = function(e) {\n                    e.stopPropagation();\n                    e.preventDefault();\n                    if(e.type == 'dragover'){\n                        element.classList.add('hover');\n                    }\n                    else {\n                        element.classList.remove('hover');\n                    }\n                    if (e.type == 'drop' && e.dataTransfer) {\n                        var files = e.dataTransfer.files;\n                        var file = files[0];\n                        if (file) {\n                            fileData.file(file);\n                            if (ko.isObservable(valueAccessor())) {\n                                valueAccessor()(fileData);\n                            }\n                        }\n                    }\n                };\n\n                $(element).data(\"fileDragInjected\", true);\n            }\n        }\n    };\n\n    ko.bindingHandlers.customFileInput = {\n        init: function(element, valueAccessor, allBindingsAccessor) {\n            if (ko.utils.unwrapObservable(valueAccessor()) === false) {\n                return;\n            }\n            //*\n            var sysOpts = fileBindings.customFileInputSystemOptions;\n            var defOpts = fileBindings.defaultOptions;\n\n            var $element = $(element);\n            var $wrapper = $('<span>').addClass(sysOpts.wrapperClass).addClass(defOpts.wrapperClass);\n            var $buttonGroup = $('<span>').addClass(sysOpts.buttonGroupClass).addClass(defOpts.buttonGroupClass);\n            $buttonGroup.append($('<span>').addClass(sysOpts.buttonClass));\n            $element.wrap($wrapper).wrap($buttonGroup);\n            var $buttonGroup = $element.parent('.' + sysOpts.buttonClass).parent();\n            $buttonGroup.before($('<input>').attr('type', 'text').attr('disabled', 'disabled').addClass(sysOpts.fileNameClass));\n            $element.before($('<span>').addClass(sysOpts.buttonTextClass));\n\n        },\n        update: function(element, valueAccessor, allBindingsAccessor) {\n            var options = ko.utils.unwrapObservable(valueAccessor());\n            if (options === false) {\n                return;\n            }\n            options = options || {};\n            if (options && typeof options !== 'object') {\n                options = {};\n            }\n\n            var sysOpts = fileBindings.customFileInputSystemOptions;\n            var defOpts = fileBindings.defaultOptions;\n\n            options = $.extend({}, defOpts, options);\n\n            var allBindings = allBindingsAccessor();\n            if (!allBindings.fileInput) {\n                return;\n            }\n            var fileData = ko.utils.unwrapObservable(allBindings.fileInput) || {};\n\n            var file = ko.utils.unwrapObservable(fileData.file);\n\n            var $button = $(element).parent();\n            var $buttonGroup = $button.parent();\n\n            var $wrapper = $buttonGroup.parent();\n            $button.addClass(ko.utils.unwrapObservable(options.buttonClass));\n            $button.find('.' + sysOpts.buttonTextClass)\n                    .html(ko.utils.unwrapObservable(file ? options.changeButtonText : options.buttonText));\n            var $fileName = $wrapper.find('.' + sysOpts.fileNameClass);\n            $fileName.addClass(ko.utils.unwrapObservable(options.fileNameClass));\n\n            if (file && file.name) {\n                $fileName.val(file.name);\n            }\n            else {\n                $fileName.val(ko.utils.unwrapObservable(options.noFileText));\n            }\n\n            var $clearButton = $buttonGroup.find('.' + sysOpts.clearButtonClass);\n            if (!$clearButton.length) {\n                $clearButton = $('<span>').addClass(sysOpts.clearButtonClass);\n                $clearButton.on('click', function(e) {\n                    options.onClear(fileData, options);\n                });\n                $buttonGroup.append($clearButton);\n            }\n            $clearButton.html(ko.utils.unwrapObservable(options.clearButtonText));\n            $clearButton.addClass(ko.utils.unwrapObservable(options.clearButtonClass));\n\n\n            if (file && options.clearButton && file.name) {\n//                $clearButton.show();\n            }\n            else {\n                $clearButton.remove();\n            }\n        }\n    };\n\n    ko.fileBindings = fileBindings;\n    return fileBindings;\n}));\n",
+			"file": "knockout-file-bindings.js",
+			"file_size": 10613,
+			"file_write_time": 130995065701032319,
+			"settings":
+			{
+				"buffer_size": 10354,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "styles/ko-file-bindings.scss",
+			"settings":
+			{
+				"buffer_size": 973,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"contents": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <title>KO File Bindings</title>\n    <meta charset=\"utf-8\">\n    <meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n    <link rel=\"stylesheet\" type=\"text/css\" href=\"libs/bootstrap-3.3.6.css\">\n    <link rel=\"stylesheet\" type=\"text/css\" href=\"styles/ko-file-bindings.css\">\n    <script type='text/javascript' src='libs/jquery-2.2.0.js'></script>\n    <script type='text/javascript' src='libs/knockout-3.4.0.js'></script>\n    <script type='text/javascript' src='js/knockout-file-bindings.js'></script>\n    <script type=\"text/javascript\" src=\"js/ViewModels/ImageUploader.vm.js\"></script>\n</head>\n<body>\n    <div class=\"container\">\n        <header class=\"text-center\" style=\"display: inline-block; padding: 1em; margin: 1em 0; width: 100%;\">\n            <h1 class=\"col-md-11\">Multi Img Upload Test</h1>\n            <button class=\"btn btn-default col-md-1\" style=\"\" data-bind=\"click: debug\">Debug</button>\n        </header>\n\n        <div class=\"well\" data-bind=\"fileDrag: fileData\">\n            <div class=\"form-group row\">\n\n                <!--  The section that contains the Image that has been uploaded & the Drag n' Drop area / File Upload button for Win File Explorer uploads  -->\n                <div class=\"col-md-7\">\n                    <img style=\"height: 125px;\" class=\"img-rounded  thumb\" data-bind=\"attr: { src: fileData().dataURL }, visible: fileData().dataURL\">\n\n                    <div data-bind=\"ifnot: fileData().dataURL\">\n                        <label class=\"drag-label\">Drag file here</label>\n                    </div>\n\n                </div>\n\n                <!--  ? ? ? ? ?  -->\n                <div class=\"col-md-5\">\n                    <input type=\"file\" accept=\"image/*\" name=\"files[]\" multiple \n                                 data-bind=\"fileInput: fileData, customFileInput: { buttonClass: 'btn btn-success', fileNameClass: 'disabled form-control', onClear: onClear }\">\n                </div>\n\n            </div><!-- END => .form-group .row -->\n        </div><!-- END => #well -->\n\n        <div id=\"image-list-container\" class=\"col-md-12\">\n            <label id=\"lbl-images\">Images</label>\n            <ul id=\"image-list\"></ul>\n        </div>\n    </div><!-- END => #container -->\n</body>\n</html>",
+			"file": "index.html",
+			"file_size": 2388,
+			"file_write_time": 130995267460396320,
+			"settings":
+			{
+				"buffer_size": 2335,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"contents": "$(function () {\n  var viewModel = {};\n  \n  viewModel.fileData = ko.observable({\n    dataURL: ko.observable()\n    // base64String: ko.observable(),\n  });\n  \n  viewModel.onClear = function (fileData) {\n    if (confirm('Are you sure?'))\n      fileData.clear && fileData.clear();\n  };\n  \n  viewModel.debug = function () {\n    window.viewModel = viewModel;\n    console.log(ko.toJSON(viewModel));\n    //debugger; \n  };\n  \n  ko.applyBindings(viewModel);\n});",
+			"file": "ViewModels/ImageUploader.vm.js",
+			"file_size": 471,
+			"file_write_time": 130995241261335531,
+			"settings":
+			{
+				"buffer_size": 450,
+				"line_ending": "Windows",
+				"name": "$(function () {"
+			}
+		}
+	],
+	"build_system": "Packages/SASS Build/SASS - Compressed.sublime-build",
+	"build_system_choices":
+	[
+		[
+			[
+				[
+					"Packages/SASS Build/SASS - Compressed.sublime-build",
+					""
+				],
+				[
+					"Packages/SASS Build/SASS.sublime-build",
+					""
+				]
+			],
+			[
+				"Packages/SASS Build/SASS - Compressed.sublime-build",
+				""
+			]
+		]
+	],
+	"build_varint": "",
+	"command_palette":
+	{
+		"height": 392.0,
+		"last_filter": "",
+		"selected_items":
+		[
+			[
+				"bea",
+				"Beautify::Beautify File"
+			],
+			[
+				"minif",
+				"Minify::User File Settings"
+			],
+			[
+				"min",
+				"Minify::User File Settings"
+			],
+			[
+				"javasc",
+				"Set Syntax: JavaScript"
+			],
+			[
+				"minify",
+				"Minify::User File Settings"
+			],
+			[
+				"settings",
+				"Minify::Default File Settings"
+			],
+			[
+				"map",
+				"View: Toggle Minimap"
+			],
+			[
+				"insta",
+				"Package Control: Install Package"
+			],
+			[
+				"build",
+				"Build With: SASS - Compressed"
+			],
+			[
+				"install",
+				"Package Control: Install Package"
+			],
+			[
+				"syntax: j",
+				"Set Syntax: JSON"
+			],
+			[
+				"syntax: cs",
+				"Set Syntax: CSS"
+			],
+			[
+				"set syntax css",
+				"Set Syntax: CSS"
+			],
+			[
+				"git: br",
+				"Git: Track Remote Branch"
+			],
+			[
+				"git:",
+				"Git: Status"
+			],
+			[
+				"git",
+				"Git: Status"
+			],
+			[
+				"git: sta",
+				"Git: Status"
+			],
+			[
+				"Gist",
+				"Package Control: Install Package"
+			],
+			[
+				"mini",
+				"Minify::Minify File"
+			],
+			[
+				"PackageControl:Ins",
+				"Package Control: Install Package"
+			]
+		],
+		"width": 400.0
+	},
+	"console":
+	{
+		"height": 248.0,
+		"history":
+		[
+			"import urllib.request,os,hashlib; h = '2915d1851351e5ee549c20394736b442' + '8bc59f460fa1548d1514676163dafc88'; pf = 'Package Control.sublime-package'; ipp = sublime.installed_packages_path(); urllib.request.install_opener( urllib.request.build_opener( urllib.request.ProxyHandler()) ); by = urllib.request.urlopen( 'http://packagecontrol.io/' + pf.replace(' ', '%20')).read(); dh = hashlib.sha256(by).hexdigest(); print('Error validating download (got %s instead of %s), please try manual install' % (dh, h)) if dh != h else open(os.path.join( ipp, pf), 'wb' ).write(by) ",
+			"cls",
+			"clear",
+			"git_command",
+			"gitk",
+			"fuck you",
+			"git branch",
+			"git",
+			"\"git_command\": \"c:\\Program~Files\\Git\\bin\\git.exe\"",
+			"\"git_command\": \"C:\\Program Files\\Git\\bin\\git.exe\"",
+			"fuck you",
+			"git status;",
+			"git status",
+			"git diff .",
+			"git diff",
+			"import urllib.request,os,hashlib; h = '2915d1851351e5ee549c20394736b442' + '8bc59f460fa1548d1514676163dafc88'; pf = 'Package Control.sublime-package'; ipp = sublime.installed_packages_path(); urllib.request.install_opener( urllib.request.build_opener( urllib.request.ProxyHandler()) ); by = urllib.request.urlopen( 'http://packagecontrol.io/' + pf.replace(' ', '%20')).read(); dh = hashlib.sha256(by).hexdigest(); print('Error validating download (got %s instead of %s), please try manual install' % (dh, h)) if dh != h else open(os.path.join( ipp, pf), 'wb' ).write(by)",
+			"import urllib.request,os,hashlib; h = '2915d1851351e5ee549c20394736b442' + '8bc59f460fa1548d1514676163dafc88'; pf = 'Package Control.sublime-package'; ipp = sublime.installed_packages_path(); urllib.request.install_opener( urllib.request.build_opener( urllib.request.ProxyHandler()) ); by = urllib.request.urlopen( 'http://packagecontrol.io/' + pf.replace(' ', '%20')).read(); dh = hashlib.sha256(by).hexdigest();",
+			"import urllib.request,os,hashlib; h = '2915d1851351e5ee549c20394736b442' + '8bc59f460fa1548d1514676163dafc88'; pf = 'Package Control.sublime-package'; ipp = sublime.installed_packages_path(); urllib.request.install_opener( urllib.request.build_opener( urllib.request.ProxyHandler()) ); by = urllib.request.urlopen( 'http://packagecontrol.io/' + pf.replace(' ', '%20')).read(); dh = hashlib.sha256(by).hexdigest(); print('Error validating download (got %s instead of %s)",
+			"import urllib.request,os,hashlib; h = '2915d1851351e5ee549c20394736b442' + '8bc59f460fa1548d1514676163dafc88'; pf = 'Package Control.sublime-package'; ipp = sublime.installed_packages_path(); urllib.request.install_opener( urllib.request.build_opener( urllib.request.ProxyHandler()) ); by = urllib.request.urlopen( 'http://packagecontrol.io/' + pf.replace(' ', '%20')).read(); dh = hashlib.sha256(by).hexdigest(); print('Error validating download (got %s instead of %s), please try manual install'%(dh, h)) if dh != h else open(os.path.join( ipp, pf), 'wb' ).write(by)",
+			"import urllib.request,os,hashlib; h = '2915d1851351e5ee549c20394736b442' + '8bc59f460fa1548d1514676163dafc88'; pf = 'Package Control.sublime-package'; ipp = sublime.installed_packages_path(); urllib.request.install_opener( urllib.request.build_opener( urllib.request.ProxyHandler()) ); by = urllib.request.urlopen( 'http://packagecontrol.io/' + pf.replace(' ', '%20')).read(); dh = hashlib.sha256(by).hexdigest(); print('Error validating download (got %s instead of %s), please try manual install' % (dh, h)) if dh != h else open(os.path.join( ipp, pf), 'wb' ).write(by)"
+		]
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"file_history":
+	[
+		"/C/Users/wayne.ritchie/AppData/Roaming/Sublime Text 3/Packages/Default/Preferences.sublime-settings",
+		"/C/Users/wayne.ritchie/AppData/Roaming/Sublime Text 3/Packages/User/Preferences.sublime-settings",
+		"/C/Users/wayne.ritchie/AppData/Roaming/Sublime Text 3/Packages/Package Control/Package Control.sublime-settings",
+		"/C/Users/wayne.ritchie/Documents/SourceGitHub/knockout-file-bindings/styles/ko-file-bindings.css",
+		"/C/Users/wayne.ritchie/AppData/Roaming/Sublime Text 3/Packages/User/Minify.sublime-settings",
+		"/C/Users/wayne.ritchie/Documents/SourceGitHub/knockout-file-bindings/ko-file-bindings.scss",
+		"/C/Users/wayne.ritchie/Documents/SourceGitHub/knockout-file-bindings/ViewModels/ImageUploader.vm.min.js",
+		"/C/Users/wayne.ritchie/Documents/SourceGitHub/knockout-file-bindings/index.min.html",
+		"/C/Users/wayne.ritchie/Documents/SourceGitHub/knockout-file-bindings/jquery-2.2.0.js",
+		"/C/Users/wayne.ritchie/Documents/SourceGitHub/knockout-file-bindings/jquery-2.2.0.min.js",
+		"/C/Users/wayne.ritchie/Documents/SourceGitHub/knockout-file-bindings/index.pretty.html",
+		"/C/Users/wayne.ritchie/Documents/SourceGitHub/knockout-file-bindings/bootstrap.css",
+		"/C/Users/wayne.ritchie/AppData/Roaming/Sublime Text 3/Packages/Minify/Minify.sublime-settings",
+		"/C/Users/wayne.ritchie/Documents/SourceGitHub/knockout-file-bindings/ko-file-bindings.css",
+		"/C/Users/wayne.ritchie/Documents/SourceGitHub/knockout-file-bindings/ko-file-bindings.css.map",
+		"/C/Users/wayne.ritchie/Downloads/bootstrap-sass-3.3.6.tar/bootstrap-sass-3.3.6/assets/stylesheets/_bootstrap.scss",
+		"/C/Users/wayne.ritchie/Documents/SourceGitHub/knockout-file-bindings/bootstrap.min.css",
+		"/C/Users/wayne.ritchie/Downloads/bootstrap-3.3.6-dist/bootstrap-3.3.6-dist/css/bootstrap-theme.min.css",
+		"/C/Users/wayne.ritchie/Documents/SourceGitHub/knockout-file-bindings/LICENSE",
+		"/C/Users/wayne.ritchie/Documents/SourceGitHub/knockout-file-bindings/knockout-file-bindings.css",
+		"/C/Users/wayne.ritchie/AppData/Roaming/Sublime Text 3/Packages/Syntax Highlighting for Sass/README.md",
+		"/C/Users/wayne.ritchie/Documents/SourceGitHub/knockout-file-bindings/bower.json",
+		"/C/Users/wayne.ritchie/AppData/Roaming/npm/node_modules/grunt-cli/package.json",
+		"/C/Users/wayne.ritchie/Downloads/bootstrap-3.3.6-dist/bootstrap-3.3.6-dist/js/bootstrap.min.js",
+		"/C/Users/wayne.ritchie/Downloads/bootstrap-3.3.6-dist/bootstrap-3.3.6-dist/js/npm.js",
+		"/C/Users/wayne.ritchie/Downloads/bootstrap-3.3.6-dist/bootstrap-3.3.6-dist/css/bootstrap.min.css",
+		"/C/Users/wayne.ritchie/Downloads/bootstrap-3.3.6-dist/bootstrap-3.3.6-dist/css/bootstrap.css",
+		"/C/Users/wayne.ritchie/Documents/SourceGitHub/knockout-file-bindings/bootstrap.min.css.map",
+		"/C/Users/wayne.ritchie/.bash_aliases",
+		"/C/Users/wayne.ritchie/.gitconfig",
+		"/C/Users/wayne.ritchie/AppData/Roaming/Sublime Text 3/Packages/User/Git.sublime-settings",
+		"/C/Users/wayne.ritchie/AppData/Roaming/Sublime Text 3/Packages/Git/Git.sublime-settings",
+		"/C/Users/wayne.ritchie/Documents/SourceGitHub/knockout-file-bindings/.git/config",
+		"/C/Users/wayne.ritchie/Documents/SourceGitHub/knockout-file-bindings/knockout-3.4.0.js",
+		"/C/Users/wayne.ritchie/Dropbox/NProgress-0.2.0.js",
+		"/C/Users/wayne.ritchie/Dropbox/NProgress-0.2.0.css",
+		"/C/Users/wayne.ritchie/Dropbox/iteration_recursion.js",
+		"/C/Users/wayne.ritchie/Downloads/jquery-2.2.0.min.js",
+		"/C/Users/wayne.ritchie/Downloads/jquery-sizzle-2.3.0-2-ga7bbfc9/jquery-sizzle-a7bbfc9/speed/speed.js",
+		"/C/Users/wayne.ritchie/Downloads/jquery-sizzle-2.3.0-2-ga7bbfc9/jquery-sizzle-a7bbfc9/src/sizzle.js",
+		"/C/Windows/System32/drivers/etc/hosts",
+		"/C/Users/wayne.ritchie/.bash_history",
+		"/C/Users/wayne.ritchie/Downloads/NProgress-2.0.css",
+		"/C/Users/wayne.ritchie/Downloads/NProgress-2.0.js",
+		"/C/Users/wayne.ritchie/Documents/Source/m2/m2/Items/CrossLister/js/viewmodels/states/Category.vm.js",
+		"/C/Users/wayne.ritchie/Documents/gitignore_global.txt",
+		"/C/Users/wayne.ritchie/Documents/Source/Randomness/CrossLister/CrossLister.scss",
+		"/C/Users/wayne.ritchie/Documents/sears_Program.BAK.cs",
+		"/C/Users/wayne.ritchie/Downloads/Program.cs",
+		"/C/Users/wayne.ritchie/Documents/Source/m2/m2/Items/CrossLister/js/viewmodels/models/CategoryEntry.vm.js",
+		"/C/Users/wayne.ritchie/FoosRef/css/main.css",
+		"/C/Users/wayne.ritchie/FoosRef/index.html",
+		"/C/Users/wayne.ritchie/aMazing/JS/main.js",
+		"/C/Users/wayne.ritchie/aMazing/index.html",
+		"/C/Users/wayne.ritchie/Documents/Source/m2/m2/m2site2.master",
+		"/C/Users/wayne.ritchie/Documents/Source/m2/m2/Items/CrossLister/Default.aspx",
+		"/C/Users/wayne.ritchie/AppData/Roaming/Sublime Text 3/Packages/User/HTML.sublime-settings",
+		"/C/Users/wayne.ritchie/Documents/Source/m2/m2/Management/ListingManager/js/ListingManager.js",
+		"/C/Users/wayne.ritchie/aMazing/JS/LIBS/knockoutjs3.4.0.min.js",
+		"/C/Users/wayne.ritchie/aMazing/JS/LIBS/underscorejs1.8.3.min.js",
+		"/C/Users/wayne.ritchie/AppData/Roaming/Sublime Text 3/Packages/User/Default (Windows).sublime-keymap",
+		"/C/Users/wayne.ritchie/AppData/Roaming/Sublime Text 3/Packages/User/Default (Windows).min.sublime-keymap",
+		"/C/Users/wayne.ritchie/AppData/Roaming/Sublime Text 3/Packages/Default/Default (Windows).sublime-keymap",
+		"/C/Users/wayne.ritchie/AppData/Roaming/Sublime Text 3/Packages/User/Distraction Free.sublime-settings",
+		"/C/Users/wayne.ritchie/AppData/Roaming/Sublime Text 3/Packages/User/JSON.sublime-settings",
+		"/C/Users/wayne.ritchie/AppData/Roaming/Sublime Text 3/Packages/User/Package Control.sublime-settings",
+		"/C/Users/wayne.ritchie/.bash_aliases.swp",
+		"/C/Users/wayne.ritchie/Documents/SQL Server Management Studio/sears_CategoriesTree.txt",
+		"/C/Users/wayne.ritchie/Downloads/animate.css",
+		"/C/Users/wayne.ritchie/.bash_profile",
+		"/C/Users/wayne.ritchie/.viminfo",
+		"/C/Users/wayne.ritchie/.bashrc",
+		"/C/Program Files/Git/etc/bash.bashrc",
+		"/C/Users/wayne.ritchie/Documents/Source/m2/.git/.gitconfig",
+		"/C/Program Files/Git/etc/profile",
+		"/C/Users/wayne.ritchie/Downloads/animate.min.css",
+		"/C/ProgramData/Git/config"
+	],
+	"find":
+	{
+		"height": 34.0
+	},
+	"find_in_files":
+	{
+		"height": 90.0,
+		"where_history":
+		[
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": false,
+		"find_history":
+		[
+			"Package Manager",
+			"shortcut"
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": false,
+		"replace_history":
+		[
+		],
+		"reverse": false,
+		"show_context": true,
+		"use_buffer2": true,
+		"whole_word": false,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"selected": 0,
+			"sheets":
+			[
+				{
+					"buffer": 0,
+					"file": "knockout-file-bindings.js",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 10354,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								7728,
+								7857
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/JavaScript/JavaScript.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 2208.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 0,
+					"type": "text"
+				},
+				{
+					"buffer": 1,
+					"file": "styles/ko-file-bindings.scss",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 973,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								973,
+								973
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Syntax Highlighting for Sass/Syntaxes/SCSS.tmLanguage",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 2,
+					"type": "text"
+				}
+			]
+		},
+		{
+			"selected": 1,
+			"sheets":
+			[
+				{
+					"buffer": 2,
+					"file": "index.html",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 2335,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								752,
+								752
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/HTML/HTML.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 3,
+					"type": "text"
+				},
+				{
+					"buffer": 3,
+					"file": "ViewModels/ImageUploader.vm.js",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 450,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								108,
+								108
+							]
+						],
+						"settings":
+						{
+							"auto_name": "$(function () {",
+							"syntax": "Packages/JavaScript/JavaScript.sublime-syntax",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 1,
+					"type": "text"
+				}
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 25.0
+	},
+	"input":
+	{
+		"height": 32.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			],
+			[
+				0,
+				1,
+				1,
+				2
+			]
+		],
+		"cols":
+		[
+			0.0,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			0.587319946882,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.exec":
+	{
+		"height": 106.0
+	},
+	"output.find_results":
+	{
+		"height": 0.0
+	},
+	"output.git":
+	{
+		"height": 123.0
+	},
+	"pinned_build_system": "",
+	"project": "KO-File-Bindings_Multi-Image-Upload.sublime-project",
+	"replace":
+	{
+		"height": 46.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+			[
+				"",
+				"untitled"
+			],
+			[
+				"package",
+				"Package Control Messages"
+			]
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 500.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 380.0
+	},
+	"select_symbol":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"selected_group": 0,
+	"settings":
+	{
+	},
+	"show_minimap": false,
+	"show_open_files": false,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 150.0,
+	"status_bar_visible": true,
+	"template_settings":
+	{
+	}
+}
