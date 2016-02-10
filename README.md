@@ -1,4 +1,4 @@
-> ## This is a work in progress for adding the ability for multi image drag n' drop.
+> ### This is a work in progress for adding the ability for multi image drag n' drop.
 
 Forked from [adrotec/knockout-file-bindings](https://github.com/adrotec/knockout-file-bindings)
 
