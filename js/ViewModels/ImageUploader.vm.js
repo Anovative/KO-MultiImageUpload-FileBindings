@@ -1,15 +1,17 @@
 $(function () {
-    var viewModel = {};
-    viewModel.fileData = ko.observable({
-        dataURL: ko.observable()
-    });
-    viewModel.onClear = function (fileData) {
-        if (confirm('Are you sure?'))
-            fileData.clear && fileData.clear();
-    };
-    viewModel.debug = function () {
-        window.viewModel = viewModel;
-        console.log(ko.toJSON(viewModel));
-    };
-    ko.applyBindings(viewModel);
+ 	var ImageUploaderViewModel = {};
+
+   	ImageUploaderViewModel.fileData = ko.observable({ dataURL: ko.observable() });
+
+	ImageUploaderViewModel.onClear = function (fileData) {
+		if (confirm('Are you sure?'))
+			fileData.clear && fileData.clear();
+	};
+
+	ImageUploaderViewModel.debug = function () {
+	    window.ImageUploaderViewModel = ImageUploaderViewModel;
+	    console.log(ko.toJSON(ImageUploaderViewModel));
+	};
+
+	ko.applyBindings(ImageUploaderViewModel);
 });

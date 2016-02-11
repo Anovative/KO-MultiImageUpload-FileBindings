@@ -5,9 +5,11 @@
 		// Observables
 		self.images = ko.observableArray([]);
 		// self.images.extend({ notify: 'always' }); // In the case the value(s) of  'images' changes I still want to be notified even if they are the same value(s)
+		self.fileData = ko.observable({ dataURL: ko.observable() });
 
-		self.fileData = ko.observable({
-			dataURL: ko.observable()
+		// Subscriptions
+		self.images.subscribe(function () {
+			self.fileData
 		});
 
 		// Computeds
@@ -23,6 +25,9 @@
 			// global.ImagesViewModel = ImagesViewModel;
 			console.log(ko.toJSON(ImagesViewModel));
 		};
+		// self.debug = computed(function () {
+		// 	console.log(ko.toJSON(ImagesViewModel));
+		// });
 
 		// Functions
 
