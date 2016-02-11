@@ -10,10 +10,11 @@
     <script type='text/javascript' src='libs/jquery-2.2.0.js'></script>
     <script type='text/javascript' src='libs/knockout-3.4.0.js'></script>
     <script type='text/javascript' src='js/knockout-file-bindings.js'></script>
-    <script type="text/javascript" src="js/ViewModels/ImageUploader.vm.js"></script>
+    <!-- <script type="text/javascript" src="js/ViewModels/ImageUploader.vm.js"></script> -->
+    <script type="text/javascript" src="js/ViewModels/Images.vm.js"></script>
 </head>
 <body>
-    <div class="container">
+    <div id="container" class="container">
         <header class="text-center" style="display: inline-block; padding: 1em; margin: 1em 0; width: 100%;">
             <h1 class="col-md-11">Multi Img Upload Test</h1>
             <button class="btn btn-default col-md-1" style="" data-bind="click: debug">Debug</button>
@@ -24,7 +25,7 @@
 
                 <!--  The section that contains the Image that has been uploaded & the Drag n' Drop area / File Upload button for Win File Explorer uploads  -->
                 <div class="col-md-7">
-                    <img style="height: 125px;" class="img-rounded  thumb" data-bind="attr: { src: fileData().dataURL }, visible: fileData().dataURL">
+                    <!-- <img style="height: 125px;" class="img-rounded  thumb" data-bind="attr: { src: fileData().dataURL }, visible: fileData().dataURL"> -->
                     <div data-bind="ifnot: fileData().dataURL">
                         <label class="drag-label">Drag file here</label>
                     </div>
@@ -39,9 +40,10 @@
             </div><!-- END => .form-group .row -->
         </div><!-- END => #well -->
 
-        <div id="image-list-container" class="col-md-12">
+        <div id="image-list-container" class="col-md-12" data-bind="visible: fileData().dataURL">
             <label id="lbl-images">Images</label>
             <ul id="image-list">
+                <!-- Need to add some itteration here forEach file in the images collection that has been uploaded (Worry about checking the size/extension after  multiUpload is functional)  -->
                 <li>
                     <img style="height: 125px;" class="img-rounded  thumb" data-bind="attr: { src: fileData().dataURL }, visible: fileData().dataURL">
                 </li>
