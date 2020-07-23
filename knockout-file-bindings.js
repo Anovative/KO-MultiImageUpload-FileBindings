@@ -13,15 +13,15 @@
 
     if (typeof require === "function" && typeof exports === "object" && typeof module === "object") {
         // CommonJS or Node: hard-coded dependency on "knockout"
-        factory(require("knockout"), require("jquery"));
+        factory(require("knockout"));
     } else if (typeof define === "function" && define["amd"]) {
         // AMD anonymous module with hard-coded dependency on "knockout"
-        define(["knockout", "jquery"], factory);
+        define(["knockout"], factory);
     } else {
         // <script> tag: use the global `ko` object, attaching a `mapping` property
-        factory(ko, jQuery);
+        factory(ko);
     }
-}(function (ko, $) {
+}(function (ko) {
 
     var fileBindings = {
         customFileInputSystemOptions: {
@@ -52,149 +52,312 @@
         },
     }
 
+    function extendOptions(defaultOptions, newOptions) {
+        var options = {};
+        for (var prop in defaultOptions) {
+            options[prop] = typeof newOptions[prop] !== 'undefined' ? newOptions[prop] : defaultOptions[prop];
+        }
+        return options;
+    }
+
+    function addRemoveCssClass(element, cssClasses, type){
+        var cssClasses = Array.isArray(cssClasses) ? cssClasses : cssClasses.split(' ');
+        cssClasses.forEach(function(cssClass){
+            element.classList[type](cssClass);
+        });
+        return element;
+    }
+
+    function addCssClass(element, cssClasses){
+        return addRemoveCssClass(element, cssClasses, 'add');
+    }
+
+    function removeCssClass(element, cssClasses){
+        return addRemoveCssClass(element, cssClasses, 'remove');
+    }
+
+    function hasCssClass(element, cssClass){
+        return element.classList.contains(cssClass);
+    }
+
     var windowURL = window.URL || window.webkitURL;
 
     ko.bindingHandlers.fileInput = {
         init: function(element, valueAccessor) {
-            element.onchange = function() {
-                var fileData = ko.utils.unwrapObservable(valueAccessor()) || {};
-                if (fileData.dataUrl) {
-                    fileData.dataURL = fileData.dataUrl;
-                }
-                if (fileData.objectUrl) {
-                    fileData.objectURL = fileData.objectUrl;
-                }
-                fileData.file = fileData.file || ko.observable();
+            var fileData = ko.utils.unwrapObservable(valueAccessor()) || {};
+            if (fileData.dataUrl) {
+                fileData.dataURL = fileData.dataUrl;
+            }
+            if (fileData.objectUrl) {
+                fileData.objectURL = fileData.objectUrl;
+            }
+            fileData.file = fileData.file || ko.observable();
+            fileData.fileArray = fileData.fileArray || ko.observableArray([]);
+            var currentAcceptValue = element.getAttribute('accept');
+            fileData.fileTypes = fileData.fileTypes || ko.observable(currentAcceptValue);
+            element.setAttribute('accept', fileData.fileTypes());
 
-                var file = this.files[0];
-                if (file) {
-                    fileData.file(file);
-                }
-
-                if (!fileData.clear) {
-                    fileData.clear = function() {
-                        $.each(['file', 'objectURL', 'base64String', 'binaryString', 'text', 'dataURL', 'arrayBuffer'], function(i, property) {
-                            if (fileData[property] && ko.isObservable(fileData[property])) {
-                                if (property == 'objectURL') {
-                                    windowURL.revokeObjectURL(fileData.objectURL());
-                                }
-                                fileData[property](null);
+            fileData.clear = fileData.clear || function() {
+                ['objectURL', 'base64String', 'binaryString', 'text', 'dataURL', 'arrayBuffer'].forEach(function(property, i) {
+                    if (fileData[property + 'Array'] && ko.isObservable(fileData[property + 'Array'])) {
+                        var values = fileData[property + 'Array'];
+                        while(values().length) {
+                            var val = values.splice(0, 1);
+                            if (property == 'objectURL') {
+                                windowURL.revokeObjectURL(val);
                             }
-                        });
-                        element.value = '';
-                    }
-                }
-                if (ko.isObservable(valueAccessor())) {
-                    valueAccessor()(fileData);
-                }
-            };
-            element.onchange();
-        },
-        update: function(element, valueAccessor, allBindingsAccessor) {
-
-            var fileData = ko.utils.unwrapObservable(valueAccessor());
-
-            var file = ko.isObservable(fileData.file) && fileData.file();
-
-            if (fileData.objectURL && ko.isObservable(fileData.objectURL)) {
-                var newUrl = file && windowURL.createObjectURL(file);
-                if (newUrl) {
-                    var oldUrl = fileData.objectURL();
-                    if (oldUrl) {
-                        windowURL.revokeObjectURL(oldUrl);
-                    }
-                    fileData.objectURL(newUrl);
-                }
-            }
-
-
-            if (fileData.base64String && ko.isObservable(fileData.base64String)) {
-                if (fileData.dataURL && ko.isObservable(fileData.dataURL)) {
-                    // will be handled
-                }
-                else {
-                    fileData.dataURL = ko.observable(); // hack
-                }
-            }
-
-            // var properties = ['binaryString', 'text', 'dataURL', 'arrayBuffer'], property;
-            // for(var i = 0; i < properties.length; i++){
-            //     property = properties[i];
-            ['binaryString', 'text', 'dataURL', 'arrayBuffer'].forEach(function(property){
-                var method = 'readAs' + (property.substr(0, 1).toUpperCase() + property.substr(1));
-                if (property != 'dataURL' && !(fileData[property] && ko.isObservable(fileData[property]))) {
-                    return true;
-                }
-                if (!file) {
-                    return true;
-                }
-                var reader = new FileReader();
-                reader.onload = function(e) {
-                    if (fileData[property]) {
-                        fileData[property](e.target.result);
-                    }
-                    if (method == 'readAsDataURL' && fileData.base64String && ko.isObservable(fileData.base64String)) {
-                        var resultParts = e.target.result.split(",");
-                        if (resultParts.length === 2) {
-                            fileData.base64String(resultParts[1]);
                         }
                     }
-                };
+                    if (fileData[property] && ko.isObservable(fileData[property])) {
+                        fileData[property](null);
+                    }
+                });
+                element.value = '';
+                fileData.file(null);
+                fileData.fileArray([]);
+            }
 
-                reader[method](file);
+            function fillData(file, index, callback){
+
+                if (fileData.objectURL && ko.isObservable(fileData.objectURL)) {
+                    var newUrl = file && windowURL.createObjectURL(file);
+                    if (newUrl) {
+                        var oldUrl = fileData.objectURL();
+                        if (oldUrl) {
+                            windowURL.revokeObjectURL(oldUrl);
+                        }
+                        fileData.objectURL(newUrl);
+                    }
+                }
+
+
+                if (fileData.base64String && ko.isObservable(fileData.base64String)) {
+                    if (!(fileData.dataURL && ko.isObservable(fileData.dataURL))) {
+                        fileData.dataURL = ko.observable(); // adding on demand
+                    }
+                }
+                if (fileData.base64StringArray && ko.isObservable(fileData.base64StringArray)) {
+                    if (!(fileData.dataURLArray && ko.isObservable(fileData.dataURLArray))) {
+                        fileData.dataURLArray = ko.observableArray();
+                    }
+                }
+
+                var fileProperties = ['binaryString', 'text', 'dataURL', 'arrayBuffer'];
+                var doneFileProperties = {};
+                var checkDoneFileProperties =  function(doneProperty){
+                    var done = true;
+                    doneFileProperties[doneProperty] = true;
+                    fileProperties.forEach(function(property){
+                        done = done && doneFileProperties[property];
+                    });
+                    if(done){
+                        callback();
+                    }
+                }
+                fileProperties.forEach(function(property){
+                    if (!(fileData[property] && ko.isObservable(fileData[property])) && !(fileData[property + 'Array'] && ko.isObservable(fileData[property + 'Array']))) {
+                        checkDoneFileProperties(property);
+                        return true;
+                    }
+                    if (!file) {
+                        checkDoneFileProperties(property);
+                        return true;
+                    }
+                    if(index == 0 && fileData[property + 'Array'] && ko.isObservable(fileData[property + 'Array'])){
+                        fileData[property + 'Array']([]);
+                        // when base64String is enabled, dataURL is added if not exists (see code above)
+                        if(property == 'dataURL' && fileData.base64StringArray && ko.isObservable(fileData.base64StringArray)){
+                            fileData.base64StringArray([]);
+                        }
+                    }
+
+                    var reader = new FileReader();
+                    var method = 'readAs' + (property.substr(0, 1).toUpperCase() + property.substr(1));
+                    reader.onload = function(e) {
+                        function fillDataToProperty(result, prop){
+                            if (index == 0 && fileData[prop] && ko.isObservable(fileData[prop])) {
+                                fileData[prop](result);
+                            }
+                            if(fileData[prop + 'Array'] && ko.isObservable(fileData[prop + 'Array'])){
+                                fileData[prop + 'Array'].push(result);
+                            }
+                        }
+                        if (method == 'readAsDataURL' && (fileData.base64String || fileData.base64StringArray)) {
+                            var resultParts = e.target.result.split(",");
+                            if (resultParts.length === 2) {
+                                fillDataToProperty(resultParts[1], 'base64String');
+                            }
+                        }
+                        fillDataToProperty(e.target.result, property);
+                        checkDoneFileProperties(property);
+                    };
+
+                    reader[method](file);
+                });
+            }
+
+            fileData.fileArray.subscribe(function(fileArray){
+                if(!fileArray.length){
+                    valueAccessor().valueHasMutated();
+                    return;
+                }
+                var doneFiles = [];
+                var checkDoneFiles = function(doneFile){
+                    var done = true;
+                    doneFiles[doneFile] = true;
+                    for(var index in fileArray){
+                        done = done && doneFiles[index];
+                    }
+                    if(done){
+                        valueAccessor().valueHasMutated();
+                    }
+                }
+                fileArray.forEach(function(file, index){
+                    fillData(file, index, function(){
+                        checkDoneFiles(index);
+                    });
+                });
             });
+
+            element.onchange = function() {
+
+                var file = this.files[0];
+                var fileArray = [];
+                if (file) {
+                    for(var i = 0; i < this.files.length; i++){ // FileList is not an array
+                        fileArray.push(this.files[i]);
+                    }
+                    fileData.file(file);
+                }
+                fileData.fileArray(fileArray); // set it once for subscriptions to work properly
+
+            };
+
+            ko.utils.domNodeDisposal.addDisposeCallback(element, function() {
+                var fileData = ko.utils.unwrapObservable(valueAccessor()) || {};
+                fileData.clear = undefined;
+            });
+        },
+        update: function(element, valueAccessor, allBindingsAccessor) {
         }
     };
 
+    function matchFile(fileType, file) {
+      if(fileType.startsWith('.')) {
+        return file.name.endsWith(fileType);
+      } else if (fileType.endsWith('/*')) {
+        var prefix = fileType.slice(0, -1);
+        return file.type.startsWith(prefix);
+      } else {
+        return file.type === fileType;
+      }
+    }
+
+    function validateDroppedFileType(fileInput, file) {
+      if(fileInput) {
+        var accept = fileInput.getAttribute('accept');
+        if(accept) {
+          var fileMatched = false;
+          var fileTypes = accept.split(',');
+
+          for (var i = 0; i < fileTypes.length; i++) {
+            fileMatched |= matchFile(fileTypes[i], file);
+          }
+
+          return fileMatched;
+        }
+      }
+      return true;
+    }
+
     ko.bindingHandlers.fileDrag = {
         update: function(element, valueAccessor, allBindingsAccessor) {
-            var fileData = ko.utils.unwrapObservable(valueAccessor()) || {};
+            var inputElements = element.getElementsByTagName('input');
+            var fileInput = null;
 
-            if (!$(element).data("fileDragInjected")) {
-                element.classList.add('filedrag');
+            for(i=0; i<inputElements.length; i++) {
+              if(inputElements[i].type === 'file') fileInput = inputElements[i];
+            }
+
+            var fileData = ko.utils.unwrapObservable(valueAccessor()) || {};
+            if (!element.getAttribute("file-drag-injected")) {
+                addCssClass(element, 'filedrag');
                 element.ondragover = element.ondragleave = element.ondrop = function(e) {
                     e.stopPropagation();
                     e.preventDefault();
                     if(e.type == 'dragover'){
-                        element.classList.add('hover');
+                        addCssClass(element, 'hover');
                     }
                     else {
-                        element.classList.remove('hover');
+                        removeCssClass(element, 'hover');
                     }
                     if (e.type == 'drop' && e.dataTransfer) {
                         var files = e.dataTransfer.files;
-                        var file = files[0];
-                        if (file) {
-                            fileData.file(file);
-                            if (ko.isObservable(valueAccessor())) {
-                                valueAccessor()(fileData);
+                        var fileArray = [];
+                        var failedFiles = [];
+                        if (files.length) {
+                            for(var i = 0; i < files.length; i++){
+                              if(validateDroppedFileType(fileInput, files[i])) fileArray.push(files[i]);
+                              else failedFiles.push(files[i]);
                             }
+                            fileData.file(fileArray.length ? fileArray[0] : {});
                         }
+                        if(!fileArray.length) fileData.clear();
+                        if(failedFiles.length) {
+                          // handle bad file drop, fire off a file rejected event here
+                          var fileInputContext = ko.dataFor(fileInput);
+                          if(fileInputContext && typeof fileInputContext.onInvalidFileDrop === "function") {
+                            fileInputContext.onInvalidFileDrop(failedFiles);
+                          }
+                        }
+                        fileData.fileArray(fileArray);
                     }
                 };
 
-                $(element).data("fileDragInjected", true);
+                element.setAttribute("file-drag-injected", 1);
             }
         }
     };
 
     ko.bindingHandlers.customFileInput = {
         init: function(element, valueAccessor, allBindingsAccessor) {
-            if (ko.utils.unwrapObservable(valueAccessor()) === false) {
+            var options = ko.utils.unwrapObservable(valueAccessor());
+            if (options === false) {
                 return;
             }
-            //*
+            if (typeof options !== 'object') {
+                options = {};
+            }
+
             var sysOpts = fileBindings.customFileInputSystemOptions;
             var defOpts = fileBindings.defaultOptions;
 
-            var $element = $(element);
-            var $wrapper = $('<span>').addClass(sysOpts.wrapperClass).addClass(defOpts.wrapperClass);
-            var $buttonGroup = $('<span>').addClass(sysOpts.buttonGroupClass).addClass(defOpts.buttonGroupClass);
-            $buttonGroup.append($('<span>').addClass(sysOpts.buttonClass));
-            $element.wrap($wrapper).wrap($buttonGroup);
-            var $buttonGroup = $element.parent('.' + sysOpts.buttonClass).parent();
-            $buttonGroup.before($('<input>').attr('type', 'text').attr('disabled', 'disabled').addClass(sysOpts.fileNameClass));
-            $element.before($('<span>').addClass(sysOpts.buttonTextClass));
+            options = extendOptions(defOpts, options);
+
+            var wrapper = addCssClass(document.createElement('span'), [sysOpts.wrapperClass, options.wrapperClass]);
+            var buttonGroup = addCssClass(document.createElement('span'), [sysOpts.buttonGroupClass, options.buttonGroupClass]);
+            var button = addCssClass(document.createElement('span'), sysOpts.buttonClass);
+            buttonGroup.appendChild(button);
+            wrapper.appendChild(buttonGroup);
+            element.parentNode.insertBefore(wrapper, element);
+            button.appendChild(element);
+
+            if(options.fileName){
+                var fileNameInput = document.createElement('input');
+                fileNameInput.setAttribute('type', 'text');
+                fileNameInput.setAttribute('disabled', 'disabled');
+                buttonGroup.parentNode.insertBefore(addCssClass(fileNameInput, sysOpts.fileNameClass), buttonGroup);
+                if(hasCssClass(buttonGroup, 'btn-group')){
+                    addCssClass(removeCssClass(buttonGroup, 'btn-group'), 'input-group-btn');
+                }
+            }
+            else {
+                if(hasCssClass(buttonGroup, 'input-group-btn')){
+                    addCssClass(removeCssClass(buttonGroup, 'input-group-btn'), 'btn-group');
+                }
+            }
+
+            element.parentNode.insertBefore(addCssClass(document.createElement('span'), sysOpts.buttonTextClass), element);
 
         },
         update: function(element, valueAccessor, allBindingsAccessor) {
@@ -202,15 +365,14 @@
             if (options === false) {
                 return;
             }
-            options = options || {};
-            if (options && typeof options !== 'object') {
+            if (typeof options !== 'object') {
                 options = {};
             }
 
             var sysOpts = fileBindings.customFileInputSystemOptions;
             var defOpts = fileBindings.defaultOptions;
 
-            options = $.extend({}, defOpts, options);
+            options = extendOptions(defOpts, options);
 
             var allBindings = allBindingsAccessor();
             if (!allBindings.fileInput) {
@@ -220,40 +382,45 @@
 
             var file = ko.utils.unwrapObservable(fileData.file);
 
-            var $button = $(element).parent();
-            var $buttonGroup = $button.parent();
+            var button = element.parentNode;
+            var buttonGroup = button.parentNode;
+            var wrapper = buttonGroup.parentNode;
 
-            var $wrapper = $buttonGroup.parent();
-            $button.addClass(ko.utils.unwrapObservable(options.buttonClass));
-            $button.find('.' + sysOpts.buttonTextClass)
-                    .html(ko.utils.unwrapObservable(file ? options.changeButtonText : options.buttonText));
-            var $fileName = $wrapper.find('.' + sysOpts.fileNameClass);
-            $fileName.addClass(ko.utils.unwrapObservable(options.fileNameClass));
+            addCssClass(button, ko.utils.unwrapObservable(options.buttonClass));
+            var buttonText = button.querySelector('.' + sysOpts.buttonTextClass);
+            buttonText.innerText = ko.utils.unwrapObservable(file ? options.changeButtonText : options.buttonText);
+            if(options.fileName){
+                var fileNameInput = wrapper.querySelector('.' + sysOpts.fileNameClass);
+                addCssClass(fileNameInput, ko.utils.unwrapObservable(options.fileNameClass));
 
-            if (file && file.name) {
-                $fileName.val(file.name);
+                if (file && file.name) {
+                    if(fileData.fileArray().length > 2){
+                        fileNameInput.value = fileData.fileArray().length + ' files';
+                    }
+                    else {
+                        fileNameInput.value = fileData.fileArray().map(function(f){ return f.name }).join(', ');
+                    }
+                }
+                else {
+                    fileNameInput.value = ko.utils.unwrapObservable(options.noFileText);
+                }
             }
-            else {
-                $fileName.val(ko.utils.unwrapObservable(options.noFileText));
-            }
 
-            var $clearButton = $buttonGroup.find('.' + sysOpts.clearButtonClass);
-            if (!$clearButton.length) {
-                $clearButton = $('<span>').addClass(sysOpts.clearButtonClass);
-                $clearButton.on('click', function(e) {
+            var clearButton = buttonGroup.querySelector('.' + sysOpts.clearButtonClass);
+            if (!clearButton) {
+                clearButton = addCssClass(document.createElement('span'), sysOpts.clearButtonClass);
+                clearButton.onclick = function(e){
                     options.onClear(fileData, options);
-                });
-                $buttonGroup.append($clearButton);
+                }
+                buttonGroup.appendChild(clearButton);
             }
-            $clearButton.html(ko.utils.unwrapObservable(options.clearButtonText));
-            $clearButton.addClass(ko.utils.unwrapObservable(options.clearButtonClass));
-
+            clearButton.innerText = ko.utils.unwrapObservable(options.clearButtonText);
+            addCssClass(clearButton, ko.utils.unwrapObservable(options.clearButtonClass));
 
             if (file && options.clearButton && file.name) {
-//                $clearButton.show();
             }
             else {
-                $clearButton.remove();
+                clearButton.parentNode.removeChild(clearButton);
             }
         }
     };
